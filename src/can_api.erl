@@ -3,7 +3,7 @@
 -include_lib("include/records.hrl").
 
 api_key() ->
-    {ok, CANInfo} = application:getenv(coronabot, covidactnow),
+    {ok, CANInfo} = application:get_env(coronabot, covidactnow),
     proplists:get_value(api_key, CANInfo).
 
 get_actuals_record_with_date(Date, Actuals) ->
@@ -146,7 +146,9 @@ parse_ts_actuals(Json) ->
         negative_tests=proplists:get_value(<<"negativeTests">>, Json)
     }.
 
-state_hist(FipsCode) ->
+state_hist(FipsCode) when is_binary(FipsCode) ->
+    state_hist(binary_to_list(FipsCode));
+state_hist(FipsCode) when is_list(FipsCode) ->
     Url = "https://api.covidactnow.org/v2/state/" ++ FipsCode
             ++ ".timeseries.json?apiKey=" ++ api_key(),
     Headers = [],

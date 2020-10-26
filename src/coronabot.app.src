@@ -1,0 +1,20 @@
+{application, coronabot, [
+    {description, ""},
+    {vsn, "1"},
+    {registered, []},
+    {applications, [
+        kernel,
+        stdlib,
+        sasl,
+        runtime_tools,
+        crypto,
+        lager,
+        jsx,
+        raven,
+        estatsd,
+        inets,
+        slack_rtm
+    ]},
+    {mod, { coronabot_app, []}},
+    {env, []}
+]}.
