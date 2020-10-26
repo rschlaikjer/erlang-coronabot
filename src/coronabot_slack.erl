@@ -138,6 +138,9 @@ handle_command_word(State, _User, Channel, Command, Args) ->
     lager:info("Unknown command '~p', args ~p~n", [Command, Args]),
     post_chat_message(State, Channel, <<"Sorry, don't know how to '", Command/binary, "'.">>).
 
+make_url(ChartName) ->
+    "https://covid.rhye.org/" ++ ChartName.
+
 respond_chart_daily(State, Channel, FIPS) ->
     lager:info("Generating daily chart for ~s~n", [FIPS]),
     spawn(fun() ->
@@ -148,7 +151,7 @@ respond_chart_daily(State, Channel, FIPS) ->
                 ChartName = lists:flatten(io_lib:format("~s.daily.~p.~p.~p.png", [FIPS, Y, M, D])),
                 OutFile = "/tmp/" ++ ChartName,
                 gnuplot:plot_case_count(Metrics, OutFile),
-                Url = "https://covid.rhye.org/charts/" ++ ChartName,
+                Url = make_url(ChartName),
                 post_chat_message(State, Channel, list_to_binary(Url));
             Other ->
                 lager:info("Query failed: ~p~n", [Other])
@@ -162,10 +165,10 @@ respond_chart_cumulative(State, Channel, FIPS) ->
             {ok, Json} ->
                 Metrics = can_api:parse_json(Json),
                 {Y, M, D} = date(),
-                ChartName = lists:flatten(io_lib:format("~s.daily.~p.~p.~p.png", [FIPS, Y, M, D])),
+                ChartName = lists:flatten(io_lib:format("~s.cumulative.~p.~p.~p.png", [FIPS, Y, M, D])),
                 OutFile = "/tmp/" ++ ChartName,
                 gnuplot:plot_cum_case_count(Metrics, OutFile),
-                Url = "https://covid.rhye.org/charts/" ++ ChartName,
+                Url = make_url(ChartName),
                 post_chat_message(State, Channel, list_to_binary(Url));
             Other ->
                 lager:info("Query failed: ~p~n", [Other])
@@ -179,10 +182,10 @@ respond_chart_infection(State, Channel, FIPS) ->
             {ok, Json} ->
                 Metrics = can_api:parse_json(Json),
                 {Y, M, D} = date(),
-                ChartName = lists:flatten(io_lib:format("~s.daily.~p.~p.~p.png", [FIPS, Y, M, D])),
+                ChartName = lists:flatten(io_lib:format("~s.infection.~p.~p.~p.png", [FIPS, Y, M, D])),
                 OutFile = "/tmp/" ++ ChartName,
                 gnuplot:plot_infection_rate(Metrics, OutFile),
-                Url = "https://covid.rhye.org/charts/" ++ ChartName,
+                Url = make_url(ChartName),
                 post_chat_message(State, Channel, list_to_binary(Url));
             Other ->
                 lager:info("Query failed: ~p~n", [Other])
