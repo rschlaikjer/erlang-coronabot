@@ -150,7 +150,7 @@ respond_chart_daily(State, Channel, FIPS) ->
                 {Y, M, D} = date(),
                 ChartName = lists:flatten(io_lib:format("~s.daily.~p.~p.~p.png", [FIPS, Y, M, D])),
                 OutFile = "/tmp/" ++ ChartName,
-                gnuplot:plot_case_count(Metrics, OutFile),
+                gnuplot:plot_daily_case_count(Metrics, OutFile),
                 Url = make_url(ChartName),
                 post_chat_message(State, Channel, list_to_binary(Url));
             Other ->
