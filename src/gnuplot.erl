@@ -48,7 +48,7 @@ plot_infection_rate(Metrics, OutFile) ->
     TempFile = gen_data_file(Merged),
     Header = plot_header(StartDate, EndDate, Title, OutFile) ++ [
         "set cbrange [0:1.2]",
-        "set palette defined (0 'green', 1 'yellow', 1.2 'red')"
+        "set palette defined (0 'dark-green', 1 'yellow', 1.2 'red')"
     ],
     Series = [
         "'" ++ TempFile ++ "' using 1:4:4 with lines linewidth 4 lc pal z title 'Infection Rate'"
