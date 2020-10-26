@@ -196,7 +196,7 @@ respond_chart_infection(State, Channel, FIPS) ->
     end).
 
 help_text() ->
-    HelpText = "Usage: !coronabot state daily|cumulative|infection\n",
+    HelpText = "Usage: !covid state daily|cumulative|infection\n",
     HelpText.
 
 respond_help(State, Channel) ->
