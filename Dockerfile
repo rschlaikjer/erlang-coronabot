@@ -1,4 +1,4 @@
-FROM erlang:20.3.8.2 as builder
+FROM erlang:22.3.4.12 as builder
 
 WORKDIR /src
 COPY . /src
