@@ -215,7 +215,7 @@ post_chat(State, Channel, Extras) when is_list(Extras) ->
     Json = jsx:encode([
         {<<"channel">>, Channel},
         {<<"as_user">>, false},
-        {<<"icon_emoji">>, <<":coronavirus_shitty_version:">>},
+        {<<"icon_emoji">>, <<":coronavirus-shitty-version:">>},
         {<<"username">>, <<"Mr. Rona">>},
         {<<"unfurl_links">>, <<"true">>}
     ] ++ Extras),
