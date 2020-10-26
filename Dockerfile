@@ -9,12 +9,10 @@ RUN tar -zxvf /src/_build/prod/rel/*/*.tar.gz -C /release
 
 FROM debian:buster-slim
 
-RUN apt-get update && apt-get install -y openssl daemontools gnuplot
+RUN apt-get update && apt-get install -y openssl daemontools gnuplot libtinfo6
 
 WORKDIR /deploy
 
 COPY --from=builder /release /deploy
-
-EXPOSE 80
 
 CMD /deploy/bin/coronabot foreground
