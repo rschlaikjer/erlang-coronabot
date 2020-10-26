@@ -150,6 +150,8 @@ respond_chart_daily(State, Channel, FIPS) ->
                 gnuplot:plot_daily_case_count(Metrics, OutFile),
                 Url = make_url(ChartName),
                 post_chat_message(State, Channel, list_to_binary(Url));
+            {error, {404, _}} ->
+                post_chat_message(State, Channel, <<"Failed to query data for '", FIPS/binary, "'">>);
             Other ->
                 lager:info("Query failed: ~p~n", [Other])
         end
@@ -167,6 +169,8 @@ respond_chart_cumulative(State, Channel, FIPS) ->
                 gnuplot:plot_cum_case_count(Metrics, OutFile),
                 Url = make_url(ChartName),
                 post_chat_message(State, Channel, list_to_binary(Url));
+            {error, {404, _}} ->
+                post_chat_message(State, Channel, <<"Failed to query data for '", FIPS/binary, "'">>);
             Other ->
                 lager:info("Query failed: ~p~n", [Other])
         end
@@ -184,6 +188,8 @@ respond_chart_infection(State, Channel, FIPS) ->
                 gnuplot:plot_infection_rate(Metrics, OutFile),
                 Url = make_url(ChartName),
                 post_chat_message(State, Channel, list_to_binary(Url));
+            {error, {404, _}} ->
+                post_chat_message(State, Channel, <<"Failed to query data for '", FIPS/binary, "'">>);
             Other ->
                 lager:info("Query failed: ~p~n", [Other])
         end
