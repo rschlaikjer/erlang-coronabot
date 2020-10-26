@@ -133,10 +133,7 @@ handle_command_word(State, _User, Channel, FIPSCode, Args) ->
             respond_chart_infection(State, Channel, FIPSCode);
         _ ->
             respond_help(State, Channel, [FIPSCode|Args])
-    end;
-handle_command_word(State, _User, Channel, Command, Args) ->
-    lager:info("Unknown command '~p', args ~p~n", [Command, Args]),
-    post_chat_message(State, Channel, <<"Sorry, don't know how to '", Command/binary, "'.">>).
+    end.
 
 make_url(ChartName) ->
     "https://covid.rhye.org/" ++ ChartName.
