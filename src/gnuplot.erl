@@ -114,7 +114,7 @@ plot_header(StartDate, EndDate, Title, OutFile) ->
         "set timefmt '%Y-%m-%d'",
         "set format x '%Y-%m-%d'",
         "set xrange ['" ++ StartDate ++ "':'" ++ EndDate ++ "']",
-        "set xtics",
+        "set xtics rotate by 20 right scale 0.5",
         "set ytics",
         "set grid xtics ytics layerdefault front"
     ].
