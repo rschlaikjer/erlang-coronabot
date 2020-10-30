@@ -37,7 +37,8 @@ merge_timeseries(Metrics, Actuals) ->
                         cases=Matched#ts_actuals.cases,
                         deaths=Matched#ts_actuals.deaths,
                         positive_tests=Matched#ts_actuals.positive_tests,
-                        negative_tests=Matched#ts_actuals.negative_tests
+                        negative_tests=Matched#ts_actuals.negative_tests,
+                        new_cases=Matched#ts_actuals.new_cases
                     }
             end,
             [R2|AccIn]
@@ -83,7 +84,7 @@ fill_daily_stats(Merged) ->
         Cases7Day = lists:foldl(fun can_api:null_add/2, 0, CaseList2) / 7,
         Deaths7Day = lists:foldl(fun can_api:null_add/2, 0, DeathList2) / 7,
         Updated = Record#merged_timeseries{
-            new_cases=NewCases,
+            % new_cases=NewCases,
             new_deaths=NewDeaths,
             cases_7day=Cases7Day,
             deaths_7day=Deaths7Day
@@ -143,7 +144,8 @@ parse_ts_actuals(Json) ->
         cases=proplists:get_value(<<"cases">>, Json),
         deaths=proplists:get_value(<<"deaths">>, Json),
         positive_tests=proplists:get_value(<<"positiveTests">>, Json),
-        negative_tests=proplists:get_value(<<"negativeTests">>, Json)
+        negative_tests=proplists:get_value(<<"negativeTests">>, Json),
+        new_cases=proplists:get_value(<<"newCases">>, Json)
     }.
 
 state_hist(FipsCode) when is_binary(FipsCode) ->

@@ -60,6 +60,9 @@ code_change(OldVsn, State, _Extra) ->
 
 %% Internal functions
 
+image_path() ->
+    "/images/".
+
 api_url(State, Endpoint) ->
     "https://" ++ State#state.api_domain ++ Endpoint.
 
@@ -146,7 +149,7 @@ respond_chart_daily(State, Channel, FIPS) ->
                 Metrics = can_api:parse_json(Json),
                 {Y, M, D} = date(),
                 ChartName = lists:flatten(io_lib:format("~s.daily.~p.~p.~p.png", [FIPS, Y, M, D])),
-                OutFile = "/images/" ++ ChartName,
+                OutFile = image_path() ++ ChartName,
                 gnuplot:plot_daily_case_count(Metrics, OutFile),
                 Url = make_url(ChartName),
                 post_chat_message(State, Channel, list_to_binary(Url));
@@ -165,7 +168,7 @@ respond_chart_cumulative(State, Channel, FIPS) ->
                 Metrics = can_api:parse_json(Json),
                 {Y, M, D} = date(),
                 ChartName = lists:flatten(io_lib:format("~s.cumulative.~p.~p.~p.png", [FIPS, Y, M, D])),
-                OutFile = "/images/" ++ ChartName,
+                OutFile = image_path() ++ ChartName,
                 gnuplot:plot_cum_case_count(Metrics, OutFile),
                 Url = make_url(ChartName),
                 post_chat_message(State, Channel, list_to_binary(Url));
@@ -184,7 +187,7 @@ respond_chart_infection(State, Channel, FIPS) ->
                 Metrics = can_api:parse_json(Json),
                 {Y, M, D} = date(),
                 ChartName = lists:flatten(io_lib:format("~s.infection.~p.~p.~p.png", [FIPS, Y, M, D])),
-                OutFile = "/images/" ++ ChartName,
+                OutFile = image_path() ++ ChartName,
                 gnuplot:plot_infection_rate(Metrics, OutFile),
                 Url = make_url(ChartName),
                 post_chat_message(State, Channel, list_to_binary(Url));
