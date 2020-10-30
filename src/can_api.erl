@@ -114,12 +114,22 @@ merged_timeseries_to_rows(Merged) ->
         ])
         || M <- Merged].
 
+metric_is_null(M=#ts_metrics{}) ->
+    M#ts_metrics.infection_rate =:= null;
+metric_is_null(M=#ts_actuals{}) ->
+    M#ts_actuals.cases =:= null andalso
+    M#ts_actuals.deaths =:= null andalso
+    M#ts_actuals.positive_tests =:= null andalso
+    M#ts_actuals.negative_tests =:= null.
+
 parse_json(Json) ->
     Metrics = proplists:get_value(<<"metrics">>, Json),
     MetricsTimeseries = proplists:get_value(<<"metricsTimeseries">>, Json),
     ActualsTimeseries = proplists:get_value(<<"actualsTimeseries">>, Json),
-    MetricsRecords = [parse_ts_metric(M) || M <- MetricsTimeseries],
-    ActualsRecords = [parse_ts_actuals(M) || M <- ActualsTimeseries],
+    MetricsRecordsRaw = [parse_ts_metric(M) || M <- MetricsTimeseries],
+    ActualsRecordsRaw = [parse_ts_actuals(M) || M <- ActualsTimeseries],
+    MetricsRecords = lists:dropwhile(fun metric_is_null/1, MetricsRecordsRaw),
+    ActualsRecords = lists:dropwhile(fun metric_is_null/1, ActualsRecordsRaw),
     #metrics{
         country=proplists:get_value(<<"country">>, Json),
         state=proplists:get_value(<<"state">>, Json),
