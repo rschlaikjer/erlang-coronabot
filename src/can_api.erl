@@ -73,9 +73,10 @@ fill_daily_stats(Merged) ->
     {_, _, _, Ret} = lists:foldl(
       fun(Record, {LastRecord, CaseList, DeathList, Acc}) ->
         % Update the case/death running average lists
-        RawNewCases = null_sub(Record#merged_timeseries.cases, LastRecord#merged_timeseries.cases),
+        % RawNewCases = null_sub(Record#merged_timeseries.cases, LastRecord#merged_timeseries.cases),
         RawNewDeaths = null_sub(Record#merged_timeseries.deaths, LastRecord#merged_timeseries.deaths),
-        NewCases = case RawNewCases < 0 of true -> 0; false -> RawNewCases end,
+        % NewCases = case RawNewCases < 0 of true -> 0; false -> RawNewCases end,
+        NewCases = Record#merged_timeseries.new_cases,
         NewDeaths = case RawNewDeaths < 0 of true -> 0; false -> RawNewDeaths end,
         CaseList1 = [NewCases|CaseList],
         DeathList1 = [NewDeaths|DeathList],
