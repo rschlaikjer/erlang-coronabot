@@ -156,7 +156,7 @@ handle_command_word(State, _User, Channel, FIPS, Args) ->
     case PlotFun of
         {_, Func} when is_function(Func) ->
             respond_chart(State, Channel, FetchFun, PlotFun);
-        undefined -> respond_help(State, Channel, [<<"USA">>|Args])
+        undefined -> respond_help(State, Channel, [FIPS|Args])
     end.
 
 make_url(ChartName) ->
