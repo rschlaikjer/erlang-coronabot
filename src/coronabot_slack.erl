@@ -182,7 +182,7 @@ respond_chart(State, Channel, Metrics=#metrics{}, PlotFun) ->
     post_chat_message(State, Channel, list_to_binary(Url)).
 
 help_text() ->
-    HelpText = "Usage: !covid state daily|cumulative|infection\n",
+    HelpText = "Usage: !covid state|USA daily|cumulative|infection\n",
     HelpText.
 
 respond_help(State, Channel) ->
