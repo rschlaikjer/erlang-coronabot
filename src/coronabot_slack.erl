@@ -3,6 +3,7 @@
 -behaviour(gen_server).
 -compile(export_all).
 
+-include_lib("include/records.hrl").
 -include_lib("slack_rtm/include/records.hrl").
 
 -export([start_link/3]).
@@ -121,22 +122,34 @@ binary_join(_Sep, [], Acc) -> Acc;
 binary_join(Sep, [L|List], Acc) ->
     binary_join(Sep, List, <<Acc/binary, Sep/binary, L/binary>>).
 
+chart_fun(CommandList) ->
+    case CommandList of
+        [] -> fun gnuplot:plot_daily_case_count/2;
+        [<<"daily">>] -> fun gnuplot:plot_daily_case_count/2;
+        [<<"cumulative">>] -> fun gnuplot:plot_cumulative_case_count/2;
+        [<<"cum">>] -> fun gnuplot:plot_cumulative_case_count/2;
+        [<<"infection">>] -> fun gnuplot:plot_infection_rate/2;
+        [<<"infection">>, <<"rate">>] -> fun gnuplot:plot_infection_rate/2;
+        _ -> undefined
+    end.
+
 handle_command_word(State, _User, Channel, <<"help">>, _Args) ->
     respond_help(State, Channel);
-handle_command_word(State, _User, Channel, FIPSCode, Args) ->
-    case Args of
-        [] ->
-            respond_chart_daily(State, Channel, FIPSCode);
-        [<<"daily">>] ->
-            respond_chart_daily(State, Channel, FIPSCode);
-        [<<"cumulative">>] ->
-            respond_chart_cumulative(State, Channel, FIPSCode);
-        [<<"cum">>] ->
-            respond_chart_cumulative(State, Channel, FIPSCode);
-        [<<"infection">>] ->
-            respond_chart_infection(State, Channel, FIPSCode);
-        _ ->
-            respond_help(State, Channel, [FIPSCode|Args])
+handle_command_word(State, _User, Channel, <<"USA">>, Args) ->
+    FetchFun = fun can_api:usa_hist/0,
+    PlotFun = chart_fun(Args),
+    case PlotFun of
+        Func when is_function(Func) ->
+            respond_chart(State, Channel, FetchFun, PlotFun);
+        undefined -> respond_help(State, Channel, [<<"USA">>|Args])
+    end;
+handle_command_word(State, _User, Channel, FIPS, Args) ->
+    FetchFun = fun() -> can_api:state_hist(FIPS) end,
+    PlotFun = chart_fun(Args),
+    case PlotFun of
+        Func when is_function(Func) ->
+            respond_chart(State, Channel, FetchFun, PlotFun);
+        undefined -> respond_help(State, Channel, [<<"USA">>|Args])
     end.
 
 make_url(ChartName) ->
@@ -144,62 +157,29 @@ make_url(ChartName) ->
     UrlBase = proplists:get_value(url_base, Paths),
     UrlBase ++ ChartName.
 
-respond_chart_daily(State, Channel, FIPS) ->
-    lager:info("Generating daily chart for ~s~n", [FIPS]),
-    spawn(fun() ->
-        case can_api:state_hist(FIPS) of
-            {ok, Json} ->
-                Metrics = can_api:parse_json(Json),
-                {Y, M, D} = date(),
-                ChartName = lists:flatten(io_lib:format("~s.daily.~p.~p.~p.png", [FIPS, Y, M, D])),
-                OutFile = image_path() ++ ChartName,
-                gnuplot:plot_daily_case_count(Metrics, OutFile),
-                Url = make_url(ChartName),
-                post_chat_message(State, Channel, list_to_binary(Url));
-            {error, {404, _}} ->
-                post_chat_message(State, Channel, <<"Failed to query data for '", FIPS/binary, "'">>);
-            Other ->
-                lager:info("Query failed: ~p~n", [Other])
-        end
-    end).
+metrics_area(#metrics{country=C, state=S, county=Co}) ->
+    case {C, S, Co} of
+        {_, _, V} when is_binary(V) -> V;
+        {_, V, _} when is_binary(V) -> V;
+        {V, _, _} when is_binary(V) -> V;
+        _ -> <<"UNKNOWN">>
+    end.
 
-respond_chart_cumulative(State, Channel, FIPS) ->
-    lager:info("Generating cumulative chart for ~s~n", [FIPS]),
-    spawn(fun() ->
-        case can_api:state_hist(FIPS) of
-            {ok, Json} ->
-                Metrics = can_api:parse_json(Json),
-                {Y, M, D} = date(),
-                ChartName = lists:flatten(io_lib:format("~s.cumulative.~p.~p.~p.png", [FIPS, Y, M, D])),
-                OutFile = image_path() ++ ChartName,
-                gnuplot:plot_cum_case_count(Metrics, OutFile),
-                Url = make_url(ChartName),
-                post_chat_message(State, Channel, list_to_binary(Url));
-            {error, {404, _}} ->
-                post_chat_message(State, Channel, <<"Failed to query data for '", FIPS/binary, "'">>);
-            Other ->
-                lager:info("Query failed: ~p~n", [Other])
-        end
-    end).
-
-respond_chart_infection(State, Channel, FIPS) ->
-    lager:info("Generating infection chart for ~s~n", [FIPS]),
-    spawn(fun() ->
-        case can_api:state_hist(FIPS) of
-            {ok, Json} ->
-                Metrics = can_api:parse_json(Json),
-                {Y, M, D} = date(),
-                ChartName = lists:flatten(io_lib:format("~s.infection.~p.~p.~p.png", [FIPS, Y, M, D])),
-                OutFile = image_path() ++ ChartName,
-                gnuplot:plot_infection_rate(Metrics, OutFile),
-                Url = make_url(ChartName),
-                post_chat_message(State, Channel, list_to_binary(Url));
-            {error, {404, _}} ->
-                post_chat_message(State, Channel, <<"Failed to query data for '", FIPS/binary, "'">>);
-            Other ->
-                lager:info("Query failed: ~p~n", [Other])
-        end
-    end).
+respond_chart(State, Channel, FetchFun, PlotFun) when is_function(FetchFun) ->
+    case FetchFun() of
+        {ok, Metrics} ->
+            respond_chart(State, Channel, Metrics, PlotFun);
+        Other ->
+            lager:info("Fetch failed: ~p~n", [Other])
+    end;
+respond_chart(State, Channel, Metrics=#metrics{}, PlotFun) ->
+    Region = metrics_area(Metrics),
+    {Y, M, D} = date(),
+    ChartName = lists:flatten(io_lib:format("~s.daily.~p.~p.~p.png", [Region, Y, M, D])),
+    OutFile = image_path() ++ ChartName,
+    PlotFun(Metrics, OutFile),
+    Url = make_url(ChartName),
+    post_chat_message(State, Channel, list_to_binary(Url)).
 
 help_text() ->
     HelpText = "Usage: !covid state daily|cumulative|infection\n",

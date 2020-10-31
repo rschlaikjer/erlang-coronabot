@@ -259,27 +259,14 @@ usa_hist() ->
     StateResults = [state_hist(Code) || Code <- states()],
 
     % Parse all the successful resps
-    StateMetrics = lists:foldl(
-        fun(StateResult, AccIn) ->
-            case (StateResult) of
-                {ok, Json} ->
-                    StateMetrics = parse_json(Json),
-                    [StateMetrics|AccIn];
-                _ -> AccIn
-            end
-        end,
-        [],
-        StateResults
-    ),
+    StateMetrics = [M || {ok, M} <- StateResults],
     lager:info("Loaded metrics for ~p states~n", [length(StateMetrics)]),
 
     % Fold them down
     Folded = lists:foldl(fun can_api:merge_metrics/2, hd(StateMetrics), tl(StateMetrics)),
 
     % Fill in the country
-    Folded#metrics {
-            country = <<"USA">>
-    }.
+    {ok, Folded#metrics{country = <<"USA">>}}.
 
 state_hist(FipsCode) when is_binary(FipsCode) ->
     state_hist(binary_to_list(FipsCode));
@@ -297,7 +284,7 @@ state_hist(FipsCode) when is_list(FipsCode) ->
             {error, service_unavailable};
         {ok, {{_, 200, _}, _RespHeaders, RespBody}} ->
             Json = jsx:decode(RespBody),
-            {ok, Json};
+            {ok, parse_json(Json)};
         {ok, {{_, Code, _}, _RespHeaders, RespBody}} ->
             {error, {Code, RespBody}}
     end.
