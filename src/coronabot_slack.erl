@@ -126,8 +126,8 @@ chart_fun(CommandList) ->
     case CommandList of
         [] -> fun gnuplot:plot_daily_case_count/2;
         [<<"daily">>] -> fun gnuplot:plot_daily_case_count/2;
-        [<<"cumulative">>] -> fun gnuplot:plot_cumulative_case_count/2;
-        [<<"cum">>] -> fun gnuplot:plot_cumulative_case_count/2;
+        [<<"cumulative">>] -> fun gnuplot:plot_cum_case_count/2;
+        [<<"cum">>] -> fun gnuplot:plot_plot_cum_case_count/2;
         [<<"infection">>] -> fun gnuplot:plot_infection_rate/2;
         [<<"infection">>, <<"rate">>] -> fun gnuplot:plot_infection_rate/2;
         _ -> undefined
