@@ -26,7 +26,7 @@ format_title(ChartType, Metrics) ->
     end.
 
 execute_plot(Cmd) ->
-    FullCmd = "gnuplot -e \"" ++ re:replace("\"", "\\\"", Cmd) ++"\"",
+    FullCmd = "gnuplot -e \"" ++ Cmd ++"\"",
     lager:info("Executing command \"~s\"~n", [FullCmd]),
     Ret = os:cmd(FullCmd),
     lager:info("Result: ~s~n", [Ret]).
@@ -116,7 +116,7 @@ plot_header(StartDate, EndDate, Title, OutFile) ->
         "set xrange ['" ++ StartDate ++ "':'" ++ EndDate ++ "']",
         "set xtics rotate by 20 right scale 0.5",
         "set decimal locale",
-        "set format y \"%'g\"",
+        "set format y '%\'g'",
         "set ytics",
         "set grid xtics ytics layerdefault front"
     ].
