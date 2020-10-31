@@ -123,13 +123,20 @@ binary_join(Sep, [L|List], Acc) ->
     binary_join(Sep, List, <<Acc/binary, Sep/binary, L/binary>>).
 
 chart_fun(CommandList) ->
+    DailyFun = fun gnuplot:plot_daily_case_count/2,
+    CumFun = fun gnuplot:plot_cum_case_count/2,
+    InfecFun = fun gnuplot:plot_infection_rate/2,
+    %
+    DailyPair = {<<"daily">>, DailyFun},
+    CumPair = {<<"cumulative">>, CumFun},
+    InfectPair = {<<"infection">>, InfecFun},
     case CommandList of
-        [] -> fun gnuplot:plot_daily_case_count/2;
-        [<<"daily">>] -> fun gnuplot:plot_daily_case_count/2;
-        [<<"cumulative">>] -> fun gnuplot:plot_cum_case_count/2;
-        [<<"cum">>] -> fun gnuplot:plot_plot_cum_case_count/2;
-        [<<"infection">>] -> fun gnuplot:plot_infection_rate/2;
-        [<<"infection">>, <<"rate">>] -> fun gnuplot:plot_infection_rate/2;
+        [] -> DailyPair;
+        [<<"daily">>] -> DailyPair;
+        [<<"cumulative">>] -> CumPair;
+        [<<"cum">>] -> CumPair;
+        [<<"infection">>] -> InfectPair;
+        [<<"infection">>, <<"rate">>] -> InfectPair;
         _ -> undefined
     end.
 
@@ -139,7 +146,7 @@ handle_command_word(State, _User, Channel, <<"USA">>, Args) ->
     FetchFun = fun can_api:usa_hist/0,
     PlotFun = chart_fun(Args),
     case PlotFun of
-        Func when is_function(Func) ->
+        {_, Func} when is_function(Func) ->
             respond_chart(State, Channel, FetchFun, PlotFun);
         undefined -> respond_help(State, Channel, [<<"USA">>|Args])
     end;
@@ -147,7 +154,7 @@ handle_command_word(State, _User, Channel, FIPS, Args) ->
     FetchFun = fun() -> can_api:state_hist(FIPS) end,
     PlotFun = chart_fun(Args),
     case PlotFun of
-        Func when is_function(Func) ->
+        {_, Func} when is_function(Func) ->
             respond_chart(State, Channel, FetchFun, PlotFun);
         undefined -> respond_help(State, Channel, [<<"USA">>|Args])
     end.
@@ -172,10 +179,10 @@ respond_chart(State, Channel, FetchFun, PlotFun) when is_function(FetchFun) ->
         Other ->
             lager:info("Fetch failed: ~p~n", [Other])
     end;
-respond_chart(State, Channel, Metrics=#metrics{}, PlotFun) ->
+respond_chart(State, Channel, Metrics=#metrics{}, {ChartClass, PlotFun}) ->
     Region = metrics_area(Metrics),
     {Y, M, D} = date(),
-    ChartName = lists:flatten(io_lib:format("~s.daily.~p.~p.~p.png", [Region, Y, M, D])),
+    ChartName = lists:flatten(io_lib:format("~s.~s.~p.~p.~p.png", [Region, ChartClass, Y, M, D])),
     OutFile = image_path() ++ ChartName,
     PlotFun(Metrics, OutFile),
     Url = make_url(ChartName),
