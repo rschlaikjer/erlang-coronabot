@@ -116,7 +116,7 @@ plot_header(StartDate, EndDate, Title, OutFile) ->
         "set xrange ['" ++ StartDate ++ "':'" ++ EndDate ++ "']",
         "set xtics rotate by 20 right scale 0.5",
         "set decimal locale",
-        "set format y '%\'g'",
+        "set format y '%g'",
         "set ytics",
         "set grid xtics ytics layerdefault front"
     ].
