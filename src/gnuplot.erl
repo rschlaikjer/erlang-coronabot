@@ -26,10 +26,10 @@ format_title(ChartType, Metrics) ->
     end.
 
 execute_plot(Cmd) ->
-    FullCmd = "gnuplot -e \"" ++ Cmd ++"\"",
+    FullCmd = "gnuplot -e \"" ++ re:replace("\"", "\\\"", Cmd) ++"\"",
     lager:info("Executing command \"~s\"~n", [FullCmd]),
     Ret = os:cmd(FullCmd),
-    lager:info("Result: ~s~n", Ret).
+    lager:info("Result: ~s~n", [Ret]).
 
 gen_data_file(Merged) ->
     Now = os:system_time(nanosecond),
