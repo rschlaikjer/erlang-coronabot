@@ -31,7 +31,7 @@ init([SlackId, SlackToken, ApiDomain]) ->
         api_domain=ApiDomain,
         slack_token=SlackToken
     },
-    slack_rtm:connect(SlackToken, record, api_url(State, "/api/rtm.start")),
+    slack_rtm:connect(SlackToken, record, slack_api_url(State, "/api/rtm.start")),
     {ok, State}.
 
 handle_call(Request, From, State) ->
@@ -61,9 +61,10 @@ code_change(OldVsn, State, _Extra) ->
 %% Internal functions
 
 image_path() ->
-    "/images/".
+    {ok, Paths} = application:get_env(coronabot, paths),
+    proplists:get_value(images, Paths).
 
-api_url(State, Endpoint) ->
+slack_api_url(State, Endpoint) ->
     "https://" ++ State#state.api_domain ++ Endpoint.
 
 handle_slack_message(State, Message=#slack_rtm_message{}) ->
@@ -139,7 +140,9 @@ handle_command_word(State, _User, Channel, FIPSCode, Args) ->
     end.
 
 make_url(ChartName) ->
-    "https://covid.rhye.org/" ++ ChartName.
+    {ok, Paths} = application:get_env(coronabot, paths),
+    UrlBase = proplists:get_value(url_base, Paths),
+    UrlBase ++ ChartName.
 
 respond_chart_daily(State, Channel, FIPS) ->
     lager:info("Generating daily chart for ~s~n", [FIPS]),
@@ -227,7 +230,7 @@ post_chat(State, Channel, Extras) when is_list(Extras) ->
        {"authorization", binary_to_list(<<"Bearer ", RtmToken/binary>>)}
     ],
     Type = "application/json",
-    Url = api_url(State, "/api/chat.postMessage"),
+    Url = slack_api_url(State, "/api/chat.postMessage"),
     Result = httpc:request(post, {Url, Headers, Type, Json}, [], []),
     case Result of
         {ok, {{_HttpVer, 200, _Msg}, _ResponseHeaders, _ResponseBody}} ->

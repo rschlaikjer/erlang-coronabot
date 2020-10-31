@@ -1,10 +1,23 @@
 -module(can_api).
 -compile(export_all).
+-compile([{parse_transform, lager_transform}]).
 -include_lib("include/records.hrl").
 
 api_key() ->
     {ok, CANInfo} = application:get_env(coronabot, covidactnow),
     proplists:get_value(api_key, CANInfo).
+
+get_metrics_record_with_date(Date, Metrics) ->
+    lists:foldl(
+      fun(R, AccIn) ->
+            case R#ts_metrics.date =:= Date of
+                true -> R;
+                false -> AccIn
+            end
+      end,
+      not_found,
+      Metrics
+    ).
 
 get_actuals_record_with_date(Date, Actuals) ->
     lists:foldl(
@@ -134,6 +147,7 @@ parse_json(Json) ->
         country=proplists:get_value(<<"country">>, Json),
         state=proplists:get_value(<<"state">>, Json),
         county=proplists:get_value(<<"county">>, Json),
+        population=proplists:get_value(<<"population">>, Json),
         positivity=proplists:get_value(<<"testPositivityRatio">>, Metrics),
         density=proplists:get_value(<<"caseDensity">>, Metrics),
         infection_rate=proplists:get_value(<<"infectionRate">>, Metrics),
@@ -157,6 +171,114 @@ parse_ts_actuals(Json) ->
         positive_tests=proplists:get_value(<<"positiveTests">>, Json),
         negative_tests=proplists:get_value(<<"negativeTests">>, Json),
         new_cases=proplists:get_value(<<"newCases">>, Json)
+    }.
+
+states() -> [
+    <<"AL">>, <<"AK">>, <<"AZ">>, <<"AR">>, <<"CA">>, <<"CO">>, <<"CT">>,
+    <<"DE">>, <<"FL">>, <<"GA">>, <<"HI">>, <<"ID">>, <<"IL">>, <<"IN">>,
+    <<"IA">>, <<"KS">>, <<"KY">>, <<"LA">>, <<"ME">>, <<"MD">>, <<"MA">>,
+    <<"MI">>, <<"MN">>, <<"MS">>, <<"MO">>, <<"MT">>, <<"NE">>, <<"NV">>,
+    <<"NH">>, <<"NJ">>, <<"NH">>, <<"NY">>, <<"NC">>, <<"ND">>, <<"OH">>,
+    <<"OK">>, <<"OR">>, <<"PA">>, <<"RI">>, <<"SC">>, <<"SD">>, <<"TN">>,
+    <<"TX">>, <<"UT">>, <<"VT">>, <<"VA">>, <<"WA">>, <<"WV">>, <<"WI">>,
+    <<"WY">>
+    ].
+
+% get_metrics_record_with_date(Date, Metrics) ->
+% get_actuals_record_with_date(Date, Actuals) ->
+
+merge_ts_metrics(WAddFunc, A, B) -> merge_ts_metrics(WAddFunc, A, B, []).
+merge_ts_metrics(_WAddFunc, [], [], Acc) -> lists:reverse(Acc);
+merge_ts_metrics(_WAddFunc, [M|Metrics], [], Acc) -> lists:reverse(Acc) ++ [M|Metrics];
+merge_ts_metrics(_WAddFunc, [], [M|Metrics], Acc) -> lists:reverse(Acc) ++ [M|Metrics];
+merge_ts_metrics(WAddFunc, [M1=#ts_metrics{}|M1Metrics], [M2=#ts_metrics{}|M2Metrics], Acc) ->
+    % Use the M1 date as a reference
+    M2Matched = get_metrics_record_with_date(M1#ts_metrics.date, [M2|M2Metrics]),
+    % Attempt to merge
+    Merged = case M2Matched of
+        #ts_metrics{} ->
+            #ts_metrics{
+                date=M1#ts_metrics.date,
+                positivity=WAddFunc(M1#ts_metrics.positivity, M2#ts_metrics.positivity),
+                density=WAddFunc(M1#ts_metrics.density, M2#ts_metrics.density),
+                infection_rate=WAddFunc(M1#ts_metrics.infection_rate, M2#ts_metrics.infection_rate)
+            };
+        _ -> % Not found just take M1
+            M1
+    end,
+    % Recurse, filtering this date
+    M2Filtered = [M || M <- [M2|M2Metrics], M#ts_metrics.date =/= M1#ts_metrics.date],
+    merge_ts_metrics(WAddFunc, M1Metrics, M2Filtered, [Merged|Acc]);
+merge_ts_metrics(WAddFunc, [M1=#ts_actuals{}|M1Metrics], [M2=#ts_actuals{}|M2Metrics], Acc) ->
+    % Use the M1 date as a reference
+    M2Matched = get_actuals_record_with_date(M1#ts_actuals.date, [M2|M2Metrics]),
+    % Attempt to merge
+    Merged = case M2Matched of
+        #ts_actuals{} ->
+            #ts_actuals{
+                date=M1#ts_actuals.date,
+                cases=null_add(M1#ts_actuals.cases, M2Matched#ts_actuals.cases),
+                deaths=null_add(M1#ts_actuals.deaths, M2Matched#ts_actuals.deaths),
+                positive_tests=null_add(M1#ts_actuals.positive_tests, M2Matched#ts_actuals.positive_tests),
+                negative_tests=null_add(M1#ts_actuals.negative_tests, M2Matched#ts_actuals.negative_tests),
+                new_cases=null_add(M1#ts_actuals.new_cases, M2Matched#ts_actuals.new_cases)
+            };
+        _ -> % Not found just take M1
+            M1
+    end,
+    % Recurse, filtering this date
+    M2Filtered = [M || M <- [M2|M2Metrics], M#ts_actuals.date =/= M1#ts_actuals.date],
+    merge_ts_metrics(WAddFunc, M1Metrics, M2Filtered, [Merged|Acc]).
+
+merge_metrics(A=#metrics{}, B=#metrics{}) ->
+    % Get the population counts for weighting
+    PopA = A#metrics.population,
+    PopB = B#metrics.population,
+    WeightedAdd = fun(AVal, BVal) ->
+        ASane = case AVal of V1 when is_integer(V1) orelse is_float(V1) -> V1; _ -> 1 end,
+        BSane = case BVal of V2 when is_integer(V2) orelse is_float(V2) -> V2; _ -> 1 end,
+        ((PopA * ASane) + (PopB * BSane)) / (PopA + PopB)
+    end,
+    % Merge the metrics/actuals lists
+    MergedMetrics = merge_ts_metrics(WeightedAdd, A#metrics.metrics_ts, B#metrics.metrics_ts),
+    MergedActuals = merge_ts_metrics(WeightedAdd, A#metrics.actuals_ts, B#metrics.actuals_ts),
+    % Ensure the metrics/actuals are ordered correctly by date
+    SortedMetrics = lists:keysort(#ts_metrics.date, MergedMetrics),
+    SortedActuals = lists:keysort(#ts_actuals.date, MergedActuals),
+    _Result = #metrics{
+        population = PopA + PopB,
+        metrics_ts=SortedMetrics,
+        actuals_ts=SortedActuals
+    }.
+
+% -record(ts_actuals, {date, cases, deaths, positive_tests, negative_tests, new_cases}).
+% -record(ts_metrics, {date, positivity, density, infection_rate}).
+
+usa_hist() ->
+    % Fetch raw JSON for every state
+    StateResults = [state_hist(Code) || Code <- states()],
+
+    % Parse all the successful resps
+    StateMetrics = lists:foldl(
+        fun(StateResult, AccIn) ->
+            case (StateResult) of
+                {ok, Json} ->
+                    StateMetrics = parse_json(Json),
+                    [StateMetrics|AccIn];
+                _ -> AccIn
+            end
+        end,
+        [],
+        StateResults
+    ),
+    lager:info("Loaded metrics for ~p states~n", [length(StateMetrics)]),
+
+    % Fold them down
+    Folded = lists:foldl(fun can_api:merge_metrics/2, hd(StateMetrics), tl(StateMetrics)),
+
+    % Fill in the country
+    Folded#metrics {
+            country = <<"USA">>
     }.
 
 state_hist(FipsCode) when is_binary(FipsCode) ->
