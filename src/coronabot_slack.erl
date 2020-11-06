@@ -95,12 +95,20 @@ message_is_for_coronabot(_, <<"!covid ", _/binary>>, _, Msg) when is_binary(Msg)
 message_is_for_coronabot(_, <<"!corona ", _/binary>>, _, Msg) when is_binary(Msg) -> true;
 message_is_for_coronabot(_, <<"!covidbot ", _/binary>>, _, Msg) when is_binary(Msg) -> true;
 message_is_for_coronabot(_, <<"!coronabot ", _/binary>>, _, Msg) when is_binary(Msg) -> true;
+message_is_for_coronabot(_, <<"!Covid ", _/binary>>, _, Msg) when is_binary(Msg) -> true;
+message_is_for_coronabot(_, <<"!Corona ", _/binary>>, _, Msg) when is_binary(Msg) -> true;
+message_is_for_coronabot(_, <<"!Covidbot ", _/binary>>, _, Msg) when is_binary(Msg) -> true;
+message_is_for_coronabot(_, <<"!Coronabot ", _/binary>>, _, Msg) when is_binary(Msg) -> true;
 message_is_for_coronabot(_, _, _, _) -> false.
 
 strip_designator(_, <<"!covid ", Rest/binary>>) -> Rest;
 strip_designator(_, <<"!corona ", Rest/binary>>) -> Rest;
 strip_designator(_, <<"!covidbot ", Rest/binary>>) -> Rest;
 strip_designator(_, <<"!coronabot ", Rest/binary>>) -> Rest;
+strip_designator(_, <<"!Covid ", Rest/binary>>) -> Rest;
+strip_designator(_, <<"!Corona ", Rest/binary>>) -> Rest;
+strip_designator(_, <<"!Covidbot ", Rest/binary>>) -> Rest;
+strip_designator(_, <<"!Coronabot ", Rest/binary>>) -> Rest;
 strip_designator(_, Msg) -> Msg.
 
 strip(<<" ", B/binary>>) -> strip(B);
