@@ -150,6 +150,8 @@ chart_fun(CommandList) ->
 
 handle_command_word(State, _User, Channel, <<"help">>, _Args) ->
     respond_help(State, Channel);
+handle_command_word(State, _User, Channel, <<"compare">>, [<<"all">>]) ->
+    respond_compare(State, Channel, can_api:states());
 handle_command_word(State, _User, Channel, <<"compare">>, Args) ->
     respond_compare(State, Channel, Args);
 handle_command_word(State, _User, Channel, <<"USA">>, Args) ->

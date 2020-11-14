@@ -125,7 +125,7 @@ plot_daily_case_count(Metrics, OutFile) ->
 
 plot_compare(MetricList, OutFile) ->
     States = [ binary_to_list(M#metrics.state) || M <- MetricList ],
-    Title = lists:flatten("Daily Case Counts for " ++ lists:join(", ", States)),
+    Title = lists:flatten("7-Day New Cases for " ++ lists:join(", ", States)),
     MergedList = [can_api:merge_timeseries(M#metrics.metrics_ts,
                                            M#metrics.actuals_ts)
                   || M <- MetricList],
@@ -144,7 +144,7 @@ plot_compare(MetricList, OutFile) ->
     lager:info("~p", [hd(StatePairs)]),
     Series = [
         lists:flatten(io_lib:format(
-            "'~s' using 1:11 with lines lw 4 lc rgb '~s' title '~s: New Cases (7 Day)'",
+            "'~s' using 1:11 with lines lw 4 lc rgb '~s' title '~s'",
             [File, state_colour(State), State]
         )) || {State, File} <- StatePairs
     ],
