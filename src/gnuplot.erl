@@ -12,6 +12,32 @@
 %          M#merged_timeseries.positive_tests,
 %          M#merged_timeseries.negative_tests])
 
+gnuplot_colours() -> [
+    "black", "dark-grey", "red", "web-green", "web-blue", "dark-magenta",
+    "dark-cyan", "dark-orange", "dark-yellow", "royalblue", "goldenrod",
+    "dark-spring-green", "purple", "steelblue", "dark-red", "dark-chartreuse",
+    "orchid", "aquamarine", "brown", "yellow", "turquoise", "grey", "light-red",
+    "light-green", "light-blue", "light-magenta", "light-cyan",
+    "light-goldenrod", "light-pink", "light-turquoise", "gold", "green",
+    "dark-green", "spring-green", "forest-green", "sea-green", "blue",
+    "dark-blue", "midnight-blue", "navy", "medium-blue", "skyblue", "cyan",
+    "magenta", "dark-turquoise", "dark-pink", "coral", "light-coral",
+    "orange-red", "salmon", "dark-salmon", "khaki", "dark-khaki",
+    "dark-goldenrod", "beige", "olive", "orange", "violet", "dark-violet",
+    "plum", "dark-plum", "dark-olivegreen", "orangered4", "brown4", "sienna4",
+    "orchid4", "mediumpurple3", "slateblue1", "yellow4", "sienna1", "tan1",
+    "sandybrown", "light-salmon", "pink", "khaki1", "lemonchiffon", "bisque",
+    "honeydew", "slategrey", "seagreen", "antiquewhite", "chartreuse",
+    "greenyellow", "gray", "light-gray", "light-grey", "dark-gray", "slategray"
+    ].
+
+state_colour(State) ->
+    D1 = crypto:hash_init(sha),
+    D2 = crypto:hash_update(D1, State),
+    Hash =crypto:hash_final(D2),
+    Int = crypto:bytes_to_integer(Hash),
+    lists:nth(Int rem length(gnuplot_colours()), gnuplot_colours()).
+
 format_title(ChartType, Metrics) ->
     Country = Metrics#metrics.country,
     State = Metrics#metrics.state,
@@ -26,7 +52,7 @@ format_title(ChartType, Metrics) ->
     end.
 
 execute_plot(Cmd) ->
-    FullCmd = "gnuplot -e \"" ++ Cmd ++"\"",
+    FullCmd = lists:flatten("gnuplot -e \"" ++ Cmd ++"\""),
     lager:info("Executing command \"~s\"~n", [FullCmd]),
     Ret = os:cmd(FullCmd),
     lager:info("Result: ~s~n", [Ret]).
@@ -95,6 +121,35 @@ plot_daily_case_count(Metrics, OutFile) ->
     Cmd = lists:join(";", Header) ++ "; plot " ++ lists:join(", ", Series),
     execute_plot(Cmd),
     file:delete(TempFile).
+
+plot_compare(MetricList, OutFile) ->
+    States = [ binary_to_list(M#metrics.state) || M <- MetricList ],
+    Title = lists:flatten("Daily Case Counts for " ++ lists:join(", ", States)),
+    MergedList = [can_api:merge_timeseries(M#metrics.metrics_ts,
+                                           M#metrics.actuals_ts)
+                  || M <- MetricList],
+    FilledList = [ can_api:fill_daily_stats(M) || M <- MergedList ],
+    Dates = lists:foldl(
+        fun(Filled, Acc) -> Acc ++ [R#merged_timeseries.date || R <- Filled] end,
+        [],
+        FilledList
+    ),
+    StartDate = binary_to_list(lists:min(Dates)),
+    EndDate = binary_to_list(lists:max(Dates)),
+    TempFiles = [gen_data_file(Filled) || Filled <- FilledList],
+    Header = plot_header(StartDate, EndDate, Title, OutFile) ++ [
+    ],
+    StatePairs = lists:zip(States, TempFiles),
+    lager:info("~p", [hd(StatePairs)]),
+    Series = [
+        lists:flatten(io_lib:format(
+            "'~s' using 1:9 with lines lw 4 lc rgb '~s' title '~s: New Cases'",
+            [File, state_colour(State), State]
+        )) || {State, File} <- StatePairs
+    ],
+    Cmd = lists:join(";", Header) ++ "; plot " ++ lists:join(", ", Series),
+    execute_plot(Cmd),
+    [file:delete(TempFile) || TempFile <- TempFiles].
 
 plot_header(StartDate, EndDate, Title, OutFile) ->
     [
