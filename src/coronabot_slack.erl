@@ -151,7 +151,7 @@ chart_fun(CommandList) ->
 handle_command_word(State, _User, Channel, <<"help">>, _Args) ->
     respond_help(State, Channel);
 handle_command_word(State, _User, Channel, <<"compare">>, Args) ->
-    respond_cpmpare(State, Channel, Args);
+    respond_compare(State, Channel, Args);
 handle_command_word(State, _User, Channel, <<"USA">>, Args) ->
     FetchFun = fun can_api:usa_hist/0,
     PlotFun = chart_fun(Args),
@@ -198,9 +198,9 @@ respond_chart(State, Channel, Metrics=#metrics{}, {ChartClass, PlotFun}) ->
     Url = make_url(ChartName),
     post_chat_message(State, Channel, list_to_binary(Url)).
 
-respond_cpmpare(State, Channel, Args) ->
+respond_compare(State, Channel, Args) ->
     % Fetch data for each state
-    StateResps = [can_api:state_hist(S) || S <- Args],
+    StateResps = [can_api:state_hist(S) || S <- lists:sort(Args)],
     % Filter only the good ones
     StateData = [Data || {ok, Data} <- StateResps],
     % Generate chart name
