@@ -214,7 +214,8 @@ respond_cpmpare(State, Channel, Args) ->
     post_chat_message(State, Channel, list_to_binary(Url)).
 
 help_text() ->
-    HelpText = "Usage: !covid state|USA daily|cumulative|infection\n",
+    HelpText = "Usage: !covid state|USA daily|cumulative|infection\n"
+               "       !covid compare State1 State2 [StateN...]",
     HelpText.
 
 respond_help(State, Channel) ->
