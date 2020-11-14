@@ -36,7 +36,8 @@ state_colour(State) ->
     D2 = crypto:hash_update(D1, State),
     Hash =crypto:hash_final(D2),
     Int = crypto:bytes_to_integer(Hash),
-    lists:nth(Int rem length(gnuplot_colours()), gnuplot_colours()).
+    Idx = Int rem length(gnuplot_colours()),
+    lists:nth(Idx + 1, gnuplot_colours()).
 
 format_title(ChartType, Metrics) ->
     Country = Metrics#metrics.country,
