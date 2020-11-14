@@ -143,7 +143,7 @@ plot_compare(MetricList, OutFile) ->
     lager:info("~p", [hd(StatePairs)]),
     Series = [
         lists:flatten(io_lib:format(
-            "'~s' using 1:9 with lines lw 4 lc rgb '~s' title '~s: New Cases'",
+            "'~s' using 1:11 with lines lw 4 lc rgb '~s' title '~s: New Cases (7 Day)'",
             [File, state_colour(State), State]
         )) || {State, File} <- StatePairs
     ],
