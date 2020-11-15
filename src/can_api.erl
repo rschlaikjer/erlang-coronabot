@@ -31,7 +31,18 @@ get_actuals_record_with_date(Date, Actuals) ->
       Actuals
     ).
 
-merge_timeseries(Metrics, Actuals) ->
+safe_div(Num, Denom) when (is_integer(Num) orelse is_float(Num))
+                     andalso (is_integer(Denom) orelse is_float(Denom)) ->
+    Num / Denom;
+safe_div(A, B) ->
+    lager:info("Can't divide ~p by ~p~n", [A, B]),
+    0.
+
+merge_timeseries(Metrics) ->
+    MetricsTs = Metrics#metrics.metrics_ts,
+    Actuals = Metrics#metrics.actuals_ts,
+    Population = Metrics#metrics.population,
+    lager:info("Population for ~s: ~p~n", [Metrics#metrics.state, Population]),
     % For each datum in the metrics list, try to look up + merge actuals
     Merged = lists:foldl(
         fun(R, AccIn) ->
@@ -51,13 +62,14 @@ merge_timeseries(Metrics, Actuals) ->
                         deaths=Matched#ts_actuals.deaths,
                         positive_tests=Matched#ts_actuals.positive_tests,
                         negative_tests=Matched#ts_actuals.negative_tests,
-                        new_cases=Matched#ts_actuals.new_cases
+                        new_cases=Matched#ts_actuals.new_cases,
+                        new_cases_per_cap=safe_div(Matched#ts_actuals.new_cases, Population)
                     }
             end,
             [R2|AccIn]
         end,
         [],
-        Metrics
+        MetricsTs
     ),
     lists:reverse(Merged).
 
@@ -65,11 +77,11 @@ null_sub(N1, N2) when is_integer(N1) andalso is_integer(N2) ->
     N1 - N2;
 null_sub(_, _) -> null.
 
-null_add(N1, N2) when is_integer(N1) andalso is_integer(N2) ->
+null_add(N1, N2) when (is_integer(N1) orelse is_float(N1)) andalso (is_integer(N2) orelse is_float(N2)) ->
     N1 + N2;
-null_add(N1, _) when is_integer(N1) ->
+null_add(N1, _) when is_integer(N1) orelse is_float(N1) ->
     N1;
-null_add(_, N2) when is_integer(N2) ->
+null_add(_, N2) when is_integer(N2) orelse is_float(N2)->
     N2;
 null_add(_, _) ->
     null.
@@ -83,35 +95,40 @@ takeprefix(N, [I|Items], Acc) ->
 
 fill_daily_stats(Merged) ->
     {Hd, Tl} = {hd(Merged), tl(Merged)},
-    {_, _, _, Ret} = lists:foldl(
-      fun(Record, {LastRecord, CaseList, DeathList, Acc}) ->
+    {_, _, _, _, Ret} = lists:foldl(
+      fun(Record, {LastRecord, CaseList, CaseCapList, DeathList, Acc}) ->
         % Update the case/death running average lists
         % RawNewCases = null_sub(Record#merged_timeseries.cases, LastRecord#merged_timeseries.cases),
         RawNewDeaths = null_sub(Record#merged_timeseries.deaths, LastRecord#merged_timeseries.deaths),
         % NewCases = case RawNewCases < 0 of true -> 0; false -> RawNewCases end,
         NewCases = Record#merged_timeseries.new_cases,
+        NewCapCases = Record#merged_timeseries.new_cases_per_cap,
         NewDeaths = case RawNewDeaths < 0 of true -> 0; false -> RawNewDeaths end,
         CaseList1 = [NewCases|CaseList],
+        CaseCapList1 = [NewCapCases|CaseCapList],
         DeathList1 = [NewDeaths|DeathList],
         CaseList2 = takeprefix(7, CaseList1),
+        CaseCapList2 = takeprefix(7, CaseCapList1),
         DeathList2 = takeprefix(7, DeathList1),
         Cases7Day = lists:foldl(fun can_api:null_add/2, 0, CaseList2) / 7,
+        Cases7DayCap = lists:foldl(fun can_api:null_add/2, 0, CaseCapList2) / 7,
         Deaths7Day = lists:foldl(fun can_api:null_add/2, 0, DeathList2) / 7,
         Updated = Record#merged_timeseries{
             % new_cases=NewCases,
             new_deaths=NewDeaths,
             cases_7day=Cases7Day,
-            deaths_7day=Deaths7Day
+            deaths_7day=Deaths7Day,
+            cases_7day_per_cap=Cases7DayCap
         },
-        {Record, CaseList2, DeathList2, [Updated|Acc]}
+        {Record, CaseList2, CaseCapList2, DeathList2, [Updated|Acc]}
       end,
-      {Hd, [], [], []},
+      {Hd, [], [], [], []},
       Tl
     ),
     lists:reverse(Ret).
 
 merged_timeseries_to_rows(Merged) ->
-    [io_lib:format("~s ~p ~p ~p ~p ~p ~p ~p ~p ~p ~p ~p~n",
+    [io_lib:format("~s ~p ~p ~p ~p ~p ~p ~p ~p ~p ~p ~p ~p ~p~n",
         [M#merged_timeseries.date,
          M#merged_timeseries.positivity,
          M#merged_timeseries.density,
@@ -123,7 +140,9 @@ merged_timeseries_to_rows(Merged) ->
          M#merged_timeseries.new_cases,
          M#merged_timeseries.new_deaths,
          M#merged_timeseries.cases_7day,
-         M#merged_timeseries.deaths_7day
+         M#merged_timeseries.deaths_7day,
+         M#merged_timeseries.new_cases_per_cap,
+         M#merged_timeseries.cases_7day_per_cap
         ])
         || M <- Merged].
 

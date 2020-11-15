@@ -67,8 +67,7 @@ gen_data_file(Merged) ->
 
 plot_infection_rate(Metrics, OutFile) ->
     Title = format_title("Infection Rate", Metrics),
-    Merged = can_api:merge_timeseries(Metrics#metrics.metrics_ts,
-                                      Metrics#metrics.actuals_ts),
+    Merged = can_api:merge_timeseries(Metrics),
     Dates = [R#merged_timeseries.date || R <- Merged],
     StartDate = binary_to_list(lists:min(Dates)),
     EndDate = binary_to_list(lists:max(Dates)),
@@ -86,8 +85,7 @@ plot_infection_rate(Metrics, OutFile) ->
 
 plot_cum_case_count(Metrics, OutFile) ->
     Title = format_title("Cumulative Case Count", Metrics),
-    Merged = can_api:merge_timeseries(Metrics#metrics.metrics_ts,
-                                      Metrics#metrics.actuals_ts),
+    Merged = can_api:merge_timeseries(Metrics),
     Dates = [R#merged_timeseries.date || R <- Merged],
     StartDate = binary_to_list(lists:min(Dates)),
     EndDate = binary_to_list(lists:max(Dates)),
@@ -104,8 +102,7 @@ plot_cum_case_count(Metrics, OutFile) ->
 
 plot_daily_case_count(Metrics, OutFile) ->
     Title = format_title("Daily Case Count", Metrics),
-    Merged = can_api:merge_timeseries(Metrics#metrics.metrics_ts,
-                                      Metrics#metrics.actuals_ts),
+    Merged = can_api:merge_timeseries(Metrics),
     Filled = can_api:fill_daily_stats(Merged),
     Dates = [R#merged_timeseries.date || R <- Filled],
     StartDate = binary_to_list(lists:min(Dates)),
@@ -126,9 +123,7 @@ plot_daily_case_count(Metrics, OutFile) ->
 plot_compare(MetricList, OutFile) ->
     States = [ binary_to_list(M#metrics.state) || M <- MetricList ],
     Title = lists:flatten("7-Day New Cases for " ++ lists:join(", ", States)),
-    MergedList = [can_api:merge_timeseries(M#metrics.metrics_ts,
-                                           M#metrics.actuals_ts)
-                  || M <- MetricList],
+    MergedList = [can_api:merge_timeseries(M) || M <- MetricList],
     FilledList = [ can_api:fill_daily_stats(M) || M <- MergedList ],
     Dates = lists:foldl(
         fun(Filled, Acc) -> Acc ++ [R#merged_timeseries.date || R <- Filled] end,
@@ -151,6 +146,33 @@ plot_compare(MetricList, OutFile) ->
     Cmd = lists:join(";", Header) ++ "; plot " ++ lists:join(", ", Series),
     execute_plot(Cmd),
     [file:delete(TempFile) || TempFile <- TempFiles].
+
+plot_compare_capita(MetricList, OutFile) ->
+    States = [ binary_to_list(M#metrics.state) || M <- MetricList ],
+    Title = lists:flatten("7-Day New Cases/Capita for " ++ lists:join(", ", States)),
+    MergedList = [can_api:merge_timeseries(M) || M <- MetricList],
+    FilledList = [ can_api:fill_daily_stats(M) || M <- MergedList ],
+    Dates = lists:foldl(
+        fun(Filled, Acc) -> Acc ++ [R#merged_timeseries.date || R <- Filled] end,
+        [],
+        FilledList
+    ),
+    StartDate = binary_to_list(lists:min(Dates)),
+    EndDate = binary_to_list(lists:max(Dates)),
+    TempFiles = [gen_data_file(Filled) || Filled <- FilledList],
+    Header = plot_header(StartDate, EndDate, Title, OutFile) ++ [
+    ],
+    StatePairs = lists:zip(States, TempFiles),
+    lager:info("~p", [hd(StatePairs)]),
+    Series = [
+        lists:flatten(io_lib:format(
+            "'~s' using 1:14 with lines lw 4 lc rgb '~s' title '~s'",
+            [File, state_colour(State), State]
+        )) || {State, File} <- StatePairs
+    ],
+    Cmd = lists:join(";", Header) ++ "; plot " ++ lists:join(", ", Series),
+    execute_plot(Cmd).
+ %[file:delete(TempFile) || TempFile <- TempFiles].
 
 plot_header(StartDate, EndDate, Title, OutFile) ->
     [
