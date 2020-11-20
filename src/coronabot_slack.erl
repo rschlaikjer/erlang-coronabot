@@ -156,6 +156,8 @@ handle_command_word(State, _User, Channel, <<"compare">>, [<<"all">>]) ->
     respond_compare(State, Channel, can_api:states());
 handle_command_word(State, _User, Channel, <<"compare">>, Args) ->
     respond_compare(State, Channel, Args);
+handle_command_word(State, _User, Channel, <<"compcap">>, [<<"all">>]) ->
+    respond_compare_capita(State, Channel, can_api:states());
 handle_command_word(State, _User, Channel, <<"compcap">>, Args) ->
     respond_compare_capita(State, Channel, Args);
 handle_command_word(State, _User, Channel, <<"USA">>, Args) ->
