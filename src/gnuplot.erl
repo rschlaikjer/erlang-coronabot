@@ -91,10 +91,14 @@ plot_cum_case_count(Metrics, OutFile) ->
     EndDate = binary_to_list(lists:max(Dates)),
     TempFile = gen_data_file(Merged),
     Header = plot_header(StartDate, EndDate, Title, OutFile) ++ [
+        "set y2tics",
+        "set ylabel 'Cases'",
+        "set y2label 'Deaths'",
+        "set link y2 via y/10 inverse y*10"
     ],
     Series = [
-        "'" ++ TempFile ++ "' using 1:5 with boxes fs solid 1.0 lc rgb 'goldenrod' title 'Total Cases'",
-        "'" ++ TempFile ++ "' using 1:6 with boxes fs solid 1.0 lc rgb 'red' title 'Total Deaths'"
+        "'" ++ TempFile ++ "' using 1:5 with filledcurves x1 fs solid 1.0 lc rgb 'goldenrod' title 'Total Cases'",
+        "'" ++ TempFile ++ "' using 1:6 with filledcurves x1 fs transparent solid 0.5 noborder lc rgb 'red' title 'Total Deaths' axes x1y2"
     ],
     Cmd = lists:join(";", Header) ++ "; plot " ++ lists:join(", ", Series),
     execute_plot(Cmd),
