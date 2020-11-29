@@ -119,8 +119,8 @@ plot_daily_case_count(Metrics, OutFile) ->
         "set link y2 via y/10 inverse y*10"
     ],
     Series = [
-        "'" ++ TempFile ++ "' using 1:9 with filledcurves x1 fs solid 1.0 lc rgb 'goldenrod' title 'New Cases (Raw)'",
-        "'" ++ TempFile ++ "' using 1:10 with filledcurves x1 fs transparent solid 0.6 noborder lc rgb 'red' title 'New Deaths (Raw)' axes x1y2",
+        "'" ++ TempFile ++ "' using 1:9 with boxes fs solid 1.0 lc rgb 'goldenrod' title 'New Cases (Raw)'",
+        "'" ++ TempFile ++ "' using 1:10 with boxes fs transparent solid 0.6 noborder lc rgb 'red' title 'New Deaths (Raw)' axes x1y2",
         "'" ++ TempFile ++ "' using 1:9 smooth bezier with lines lc rgb '#55EA26FA' lw 4 title 'New Cases (Bezier)'",
         "'" ++ TempFile ++ "' using 1:10 smooth bezier with lines lc rgb '#55546CFF' lw 4 title 'New Deaths (Bezier)' axes x1y2"
     ],
