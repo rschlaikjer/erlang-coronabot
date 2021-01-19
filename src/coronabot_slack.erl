@@ -241,7 +241,7 @@ respond_compare_capita(State, Channel, Args) ->
     post_chat_message(State, Channel, list_to_binary(Url)).
 
 help_text() ->
-    HelpText = "Usage: !covid state|USA daily|cumulative|infection\n"
+    HelpText = "Usage: !covid state|USA daily|cumulative|infection|vaccination\n"
                "       !covid compare|compcap State1 State2 [StateN...]",
     HelpText.
 
