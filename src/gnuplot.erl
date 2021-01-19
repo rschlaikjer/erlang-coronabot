@@ -52,6 +52,14 @@ format_title(ChartType, Metrics) ->
             io_lib:format("~s for ~s", [ChartType, Country])
     end.
 
+valid_dates_for_series(Records, SeriesList) ->
+    % Return all dates in date list IFF at least one of the series specified
+    % in serieslist is _not_ undefined for that date
+    TestFun = fun(R=#merged_timeseries{}) ->
+        lists:any(fun(X) -> X =/= null andalso X =/= undefined end, [element(N, R) || N <- SeriesList])
+    end,
+    _Dates = [R#merged_timeseries.date || R <- Records, TestFun(R)].
+
 execute_plot(Cmd) ->
     FullCmd = lists:flatten("gnuplot -e \"" ++ Cmd ++"\""),
     lager:info("Executing command \"~s\"~n", [FullCmd]),
@@ -68,7 +76,9 @@ gen_data_file(Merged) ->
 plot_infection_rate(Metrics, OutFile) ->
     Title = format_title("Infection Rate", Metrics),
     Merged = can_api:merge_timeseries(Metrics),
-    Dates = [R#merged_timeseries.date || R <- Merged],
+    Dates = valid_dates_for_series(Merged, [
+        #merged_timeseries.infection_rate
+    ]),
     StartDate = binary_to_list(lists:min(Dates)),
     EndDate = binary_to_list(lists:max(Dates)),
     TempFile = gen_data_file(Merged),
@@ -86,7 +96,10 @@ plot_infection_rate(Metrics, OutFile) ->
 plot_cum_case_count(Metrics, OutFile) ->
     Title = format_title("Cumulative Case Count", Metrics),
     Merged = can_api:merge_timeseries(Metrics),
-    Dates = [R#merged_timeseries.date || R <- Merged],
+    Dates = valid_dates_for_series(Merged, [
+        #merged_timeseries.cases,
+        #merged_timeseries.deaths
+    ]),
     StartDate = binary_to_list(lists:min(Dates)),
     EndDate = binary_to_list(lists:max(Dates)),
     TempFile = gen_data_file(Merged),
@@ -108,7 +121,10 @@ plot_daily_case_count(Metrics, OutFile) ->
     Title = format_title("Daily Case Count", Metrics),
     Merged = can_api:merge_timeseries(Metrics),
     Filled = can_api:fill_daily_stats(Merged),
-    Dates = [R#merged_timeseries.date || R <- Filled],
+    Dates = valid_dates_for_series(Filled, [
+        #merged_timeseries.new_cases,
+        #merged_timeseries.new_deaths
+    ]),
     StartDate = binary_to_list(lists:min(Dates)),
     EndDate = binary_to_list(lists:max(Dates)),
     TempFile = gen_data_file(Filled),
@@ -123,6 +139,30 @@ plot_daily_case_count(Metrics, OutFile) ->
         "'" ++ TempFile ++ "' using 1:10 with boxes fs transparent solid 0.6 noborder lc rgb 'red' title 'New Deaths (Raw)' axes x1y2",
         "'" ++ TempFile ++ "' using 1:9 smooth bezier with lines lc rgb '#55EA26FA' lw 4 title 'New Cases (Bezier)'",
         "'" ++ TempFile ++ "' using 1:10 smooth bezier with lines lc rgb '#55546CFF' lw 4 title 'New Deaths (Bezier)' axes x1y2"
+    ],
+    Cmd = lists:join(";", Header) ++ "; plot " ++ lists:join(", ", Series),
+    execute_plot(Cmd),
+    file:delete(TempFile).
+
+plot_vaccination_rate(Metrics, OutFile) ->
+    Title = format_title("Daily Case Count", Metrics),
+    Merged = can_api:merge_timeseries(Metrics),
+    Filled = can_api:fill_daily_stats(Merged),
+    Dates = valid_dates_for_series(Filled, [
+        #merged_timeseries.vaccines_distributed,
+        #merged_timeseries.vaccines_initiated,
+        #merged_timeseries.vaccines_completed
+    ]),
+    StartDate = binary_to_list(lists:min(Dates)),
+    EndDate = binary_to_list(lists:max(Dates)),
+    TempFile = gen_data_file(Filled),
+    Header = plot_header(StartDate, EndDate, Title, OutFile) ++ [
+        "set ylabel 'Doses'"
+    ],
+    Series = [
+        "'" ++ TempFile ++ "' using 1:15 with lines lw 4 lc rgb 'royalblue' title 'Vaccines Distributed'",
+        "'" ++ TempFile ++ "' using 1:16 with lines lw 4 lc rgb 'goldenrod' title 'Vaccines Initiated'",
+        "'" ++ TempFile ++ "' using 1:17 with lines lw 4 lc rgb 'green' title 'Vaccines Completed'"
     ],
     Cmd = lists:join(";", Header) ++ "; plot " ++ lists:join(", ", Series),
     execute_plot(Cmd),

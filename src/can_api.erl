@@ -63,7 +63,10 @@ merge_timeseries(Metrics) ->
                         positive_tests=Matched#ts_actuals.positive_tests,
                         negative_tests=Matched#ts_actuals.negative_tests,
                         new_cases=Matched#ts_actuals.new_cases,
-                        new_cases_per_cap=safe_div(Matched#ts_actuals.new_cases, Population)
+                        new_cases_per_cap=safe_div(Matched#ts_actuals.new_cases, Population),
+                        vaccines_distributed=Matched#ts_actuals.vaccines_distributed,
+                        vaccines_initiated=Matched#ts_actuals.vaccines_initiated,
+                        vaccines_completed=Matched#ts_actuals.vaccines_completed
                     }
             end,
             [R2|AccIn]
@@ -128,7 +131,7 @@ fill_daily_stats(Merged) ->
     lists:reverse(Ret).
 
 merged_timeseries_to_rows(Merged) ->
-    [io_lib:format("~s ~p ~p ~p ~p ~p ~p ~p ~p ~p ~p ~p ~p ~p~n",
+    [io_lib:format("~s ~p ~p ~p ~p ~p ~p ~p ~p ~p ~p ~p ~p ~p ~p ~p ~p~n",
         [M#merged_timeseries.date,
          M#merged_timeseries.positivity,
          M#merged_timeseries.density,
@@ -142,7 +145,10 @@ merged_timeseries_to_rows(Merged) ->
          M#merged_timeseries.cases_7day,
          M#merged_timeseries.deaths_7day,
          M#merged_timeseries.new_cases_per_cap,
-         M#merged_timeseries.cases_7day_per_cap
+         M#merged_timeseries.cases_7day_per_cap,
+         M#merged_timeseries.vaccines_distributed,
+         M#merged_timeseries.vaccines_initiated,
+         M#merged_timeseries.vaccines_completed
         ])
         || M <- Merged].
 
@@ -189,7 +195,10 @@ parse_ts_actuals(Json) ->
         deaths=proplists:get_value(<<"deaths">>, Json),
         positive_tests=proplists:get_value(<<"positiveTests">>, Json),
         negative_tests=proplists:get_value(<<"negativeTests">>, Json),
-        new_cases=proplists:get_value(<<"newCases">>, Json)
+        new_cases=proplists:get_value(<<"newCases">>, Json),
+        vaccines_distributed=proplists:get_value(<<"vaccinesDistributed">>, Json),
+        vaccines_initiated=proplists:get_value(<<"vaccinationsInitiated">>, Json),
+        vaccines_completed=proplists:get_value(<<"vaccinationsCompleted">>, Json)
     }.
 
 states() -> [
@@ -240,7 +249,10 @@ merge_ts_metrics(WAddFunc, [M1=#ts_actuals{}|M1Metrics], [M2=#ts_actuals{}|M2Met
                 deaths=null_add(M1#ts_actuals.deaths, M2Matched#ts_actuals.deaths),
                 positive_tests=null_add(M1#ts_actuals.positive_tests, M2Matched#ts_actuals.positive_tests),
                 negative_tests=null_add(M1#ts_actuals.negative_tests, M2Matched#ts_actuals.negative_tests),
-                new_cases=null_add(M1#ts_actuals.new_cases, M2Matched#ts_actuals.new_cases)
+                new_cases=null_add(M1#ts_actuals.new_cases, M2Matched#ts_actuals.new_cases),
+                vaccines_distributed=null_add(M1#ts_actuals.vaccines_distributed, M2Matched#ts_actuals.vaccines_distributed),
+                vaccines_initiated=null_add(M1#ts_actuals.vaccines_initiated, M2Matched#ts_actuals.vaccines_initiated),
+                vaccines_completed=null_add(M1#ts_actuals.vaccines_completed, M2Matched#ts_actuals.vaccines_completed)
             };
         _ -> % Not found just take M1
             M1
@@ -269,9 +281,6 @@ merge_metrics(A=#metrics{}, B=#metrics{}) ->
         metrics_ts=SortedMetrics,
         actuals_ts=SortedActuals
     }.
-
-% -record(ts_actuals, {date, cases, deaths, positive_tests, negative_tests, new_cases}).
-% -record(ts_metrics, {date, positivity, density, infection_rate}).
 
 usa_hist() ->
     % Fetch raw JSON for every state
