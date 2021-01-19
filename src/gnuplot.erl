@@ -157,7 +157,7 @@ plot_vaccination_rate(Metrics, OutFile) ->
     EndDate = binary_to_list(lists:max(Dates)),
     TempFile = gen_data_file(Filled),
     Header = plot_header(StartDate, EndDate, Title, OutFile) ++ [
-        "set ylabel 'Doses'"
+        "set ylabel 'Doses as % of Population'"
     ],
     Series = [
         "'" ++ TempFile ++ "' using 1:15 with lines lw 4 lc rgb 'royalblue' title 'Vaccines Distributed'",

@@ -36,7 +36,17 @@ safe_div(Num, Denom) when (is_integer(Num) orelse is_float(Num))
     Num / Denom;
 safe_div(A, B) ->
     lager:info("Can't divide ~p by ~p~n", [A, B]),
-    0.
+    null.
+
+safe_mul(Num, Denom) when (is_integer(Num) orelse is_float(Num))
+                     andalso (is_integer(Denom) orelse is_float(Denom)) ->
+    Num * Denom;
+safe_mul(A, B) ->
+    lager:info("Can't mul ~p by ~p~n", [A, B]),
+    null.
+
+safe_pop_perc(Val, Pop) ->
+    safe_mul(100, safe_div(Val, Pop)).
 
 merge_timeseries(Metrics) ->
     MetricsTs = Metrics#metrics.metrics_ts,
@@ -64,9 +74,9 @@ merge_timeseries(Metrics) ->
                         negative_tests=Matched#ts_actuals.negative_tests,
                         new_cases=Matched#ts_actuals.new_cases,
                         new_cases_per_cap=safe_div(Matched#ts_actuals.new_cases, Population),
-                        vaccines_distributed=Matched#ts_actuals.vaccines_distributed,
-                        vaccines_initiated=Matched#ts_actuals.vaccines_initiated,
-                        vaccines_completed=Matched#ts_actuals.vaccines_completed
+                        vaccines_distributed=safe_pop_perc(Matched#ts_actuals.vaccines_distributed, Population),
+                        vaccines_initiated=safe_pop_perc(Matched#ts_actuals.vaccines_initiated, Population),
+                        vaccines_completed=safe_pop_perc(Matched#ts_actuals.vaccines_completed, Population)
                     }
             end,
             [R2|AccIn]
