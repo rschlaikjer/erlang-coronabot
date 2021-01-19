@@ -145,7 +145,7 @@ plot_daily_case_count(Metrics, OutFile) ->
     file:delete(TempFile).
 
 plot_vaccination_rate(Metrics, OutFile) ->
-    Title = format_title("Daily Case Count", Metrics),
+    Title = format_title("Vaccination Stats", Metrics),
     Merged = can_api:merge_timeseries(Metrics),
     Filled = can_api:fill_daily_stats(Merged),
     Dates = valid_dates_for_series(Filled, [
