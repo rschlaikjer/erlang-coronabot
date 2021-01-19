@@ -162,7 +162,7 @@ plot_vaccination_rate(Metrics, OutFile) ->
     Series = [
         "'" ++ TempFile ++ "' using 1:15 with lines lw 4 lc rgb 'royalblue' title 'Vaccines Distributed'",
         "'" ++ TempFile ++ "' using 1:16 with lines lw 4 lc rgb 'goldenrod' title 'Vaccines Initiated'",
-        "'" ++ TempFile ++ "' using 1:17 with lines lw 4 lc rgb 'green' title 'Vaccines Completed'"
+        "'" ++ TempFile ++ "' using 1:17 with lines lw 4 lc rgb 'forest-green' title 'Vaccines Completed'"
     ],
     Cmd = lists:join(";", Header) ++ "; plot " ++ lists:join(", ", Series),
     execute_plot(Cmd),
