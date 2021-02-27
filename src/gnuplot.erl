@@ -232,7 +232,7 @@ plot_compare_capita(MetricList, OutFile) ->
 
 plot_compare_vaxx(MetricList, OutFile) ->
     States = [ binary_to_list(M#metrics.state) || M <- MetricList ],
-    Title = lists:flatten("Vaccine 100% speedrun for " ++ lists:join(", ", States)),
+    Title = lists:flatten("Vaccine 100% speedrun progress for " ++ lists:join(", ", States)),
     MergedList = [can_api:merge_timeseries(M) || M <- MetricList],
     FilledList = [ can_api:fill_daily_stats(M) || M <- MergedList ],
     Dates = valid_dates_for_series_list(FilledList, [
