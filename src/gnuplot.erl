@@ -52,6 +52,14 @@ format_title(ChartType, Metrics) ->
             io_lib:format("~s for ~s", [ChartType, Country])
     end.
 
+valid_dates_for_series_list(RecordsList, SeriesList) ->
+    % Return the union of valid dates from each sub-series
+    lists:foldl(
+        fun(X, Y) -> X ++ Y end,
+        [],
+        [valid_dates_for_series(R, SeriesList) || R <- RecordsList]
+    ).
+
 valid_dates_for_series(Records, SeriesList) ->
     % Return all dates in date list IFF at least one of the series specified
     % in serieslist is _not_ undefined for that date
@@ -219,8 +227,36 @@ plot_compare_capita(MetricList, OutFile) ->
         )) || {State, File} <- StatePairs
     ],
     Cmd = lists:join(";", Header) ++ "; plot " ++ lists:join(", ", Series),
-    execute_plot(Cmd).
- %[file:delete(TempFile) || TempFile <- TempFiles].
+    execute_plot(Cmd),
+    [file:delete(TempFile) || TempFile <- TempFiles].
+
+plot_compare_vaxx(MetricList, OutFile) ->
+    States = [ binary_to_list(M#metrics.state) || M <- MetricList ],
+    Title = lists:flatten("Vaccine 100% speedrun for " ++ lists:join(", ", States)),
+    MergedList = [can_api:merge_timeseries(M) || M <- MetricList],
+    FilledList = [ can_api:fill_daily_stats(M) || M <- MergedList ],
+    Dates = valid_dates_for_series_list(FilledList, [
+        #merged_timeseries.vaccines_distributed,
+        #merged_timeseries.vaccines_initiated,
+        #merged_timeseries.vaccines_completed
+    ]),
+    StartDate = binary_to_list(lists:min(Dates)),
+    EndDate = binary_to_list(lists:max(Dates)),
+    TempFiles = [gen_data_file(Filled) || Filled <- FilledList],
+    Header = plot_header(StartDate, EndDate, Title, OutFile) ++ [
+        "set ylabel 'Doses as % of Population'"
+    ],
+    StatePairs = lists:zip(States, TempFiles),
+    lager:info("~p", [hd(StatePairs)]),
+    Series = [
+        lists:flatten(io_lib:format(
+            "'~s' using 1:17 with lines lw 4 lc rgb '~s' title '~s'",
+            [File, state_colour(State), State]
+        )) || {State, File} <- StatePairs
+    ],
+    Cmd = lists:join(";", Header) ++ "; plot " ++ lists:join(", ", Series),
+    execute_plot(Cmd),
+    [file:delete(TempFile) || TempFile <- TempFiles].
 
 plot_header(StartDate, EndDate, Title, OutFile) ->
     [

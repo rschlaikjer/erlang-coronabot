@@ -164,6 +164,10 @@ handle_command_word(State, _User, Channel, <<"compcap">>, [<<"all">>]) ->
     respond_compare_capita(State, Channel, can_api:states());
 handle_command_word(State, _User, Channel, <<"compcap">>, Args) ->
     respond_compare_capita(State, Channel, Args);
+handle_command_word(State, _User, Channel, <<"compvaxx">>, [<<"all">>]) ->
+    respond_compare_vaxx(State, Channel, can_api:states());
+handle_command_word(State, _User, Channel, <<"compvaxx">>, Args) ->
+    respond_compare_vaxx(State, Channel, Args);
 handle_command_word(State, _User, Channel, <<"USA">>, Args) ->
     FetchFun = fun can_api:usa_hist/0,
     PlotFun = chart_fun(Args),
@@ -237,6 +241,21 @@ respond_compare_capita(State, Channel, Args) ->
     ChartName = lists:flatten(io_lib:format("~p.~p.~p.compare_capita.~s.png", [Y, M, D, StateStr])),
     OutFile = image_path() ++ ChartName,
     gnuplot:plot_compare_capita(StateData, OutFile),
+    Url = make_url(ChartName),
+    post_chat_message(State, Channel, list_to_binary(Url)).
+
+respond_compare_vaxx(State, Channel, Args) ->
+    % Fetch data for each state
+    StateResps = [can_api:state_hist(S) || S <- lists:sort(Args)],
+    % Filter only the good ones
+    StateData = [Data || {ok, Data} <- StateResps],
+    % Generate chart name
+    {Y, M, D} = date(),
+    States = [ Metric#metrics.state || Metric <- StateData ],
+    StateStr = binary_join(<<".">>, States),
+    ChartName = lists:flatten(io_lib:format("~p.~p.~p.compare_vaxx.~s.png", [Y, M, D, StateStr])),
+    OutFile = image_path() ++ ChartName,
+    gnuplot:plot_compare_vaxx(StateData, OutFile),
     Url = make_url(ChartName),
     post_chat_message(State, Channel, list_to_binary(Url)).
 
