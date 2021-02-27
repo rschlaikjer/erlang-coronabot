@@ -261,7 +261,7 @@ respond_compare_vaxx(State, Channel, Args) ->
 
 help_text() ->
     HelpText = "Usage: !covid state|USA daily|cumulative|infection|vaccination\n"
-               "       !covid compare|compcap State1 State2 [StateN...]",
+               "       !covid compare|compcap|compvaxx State1 State2 [StateN...]",
     HelpText.
 
 respond_help(State, Channel) ->
