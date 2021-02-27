@@ -244,7 +244,7 @@ plot_compare_vaxx(MetricList, OutFile) ->
     EndDate = binary_to_list(lists:max(Dates)),
     TempFiles = [gen_data_file(Filled) || Filled <- FilledList],
     Header = plot_header(StartDate, EndDate, Title, OutFile) ++ [
-        "set ylabel 'Doses as % of Population'"
+        "set ylabel 'Completed doses as % of Population'"
     ],
     StatePairs = lists:zip(States, TempFiles),
     lager:info("~p", [hd(StatePairs)]),
