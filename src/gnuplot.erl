@@ -31,7 +31,17 @@ gnuplot_colours() -> [
     "greenyellow", "gray", "light-gray", "light-grey", "dark-gray", "slategray"
     ].
 
+state_colour_overrides() ->
+    #{
+        "MA" => "dark-plum",
+        "RI" => "orchid",
+        "FL" => "light-red"
+    }.
+
 state_colour(State) ->
+    maps:get(State, state_colour_overrides(), hash_colour(State)).
+
+hash_colour(State) ->
     D1 = crypto:hash_init(sha),
     D2 = crypto:hash_update(D1, State),
     Hash =crypto:hash_final(D2),
