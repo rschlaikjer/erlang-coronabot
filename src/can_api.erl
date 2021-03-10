@@ -206,7 +206,7 @@ parse_ts_actuals(Json) ->
         positive_tests=proplists:get_value(<<"positiveTests">>, Json),
         negative_tests=proplists:get_value(<<"negativeTests">>, Json),
         new_cases=proplists:get_value(<<"newCases">>, Json),
-        vaccines_distributed=proplists:get_value(<<"vaccinesDistributed">>, Json),
+        vaccines_distributed=safe_div(proplists:get_value(<<"vaccinesDistributed">>, Json), 2),
         vaccines_initiated=proplists:get_value(<<"vaccinationsInitiated">>, Json),
         vaccines_completed=proplists:get_value(<<"vaccinationsCompleted">>, Json)
     }.
