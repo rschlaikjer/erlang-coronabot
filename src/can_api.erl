@@ -293,18 +293,22 @@ merge_metrics(A=#metrics{}, B=#metrics{}) ->
     }.
 
 usa_hist() ->
-    % Fetch raw JSON for every state
-    StateResults = [state_hist(Code) || Code <- states()],
-
-    % Parse all the successful resps
-    StateMetrics = [M || {ok, M} <- StateResults],
-    lager:info("Loaded metrics for ~p states~n", [length(StateMetrics)]),
-
-    % Fold them down
-    Folded = lists:foldl(fun can_api:merge_metrics/2, hd(StateMetrics), tl(StateMetrics)),
-
-    % Fill in the country
-    {ok, Folded#metrics{country = <<"USA">>}}.
+    Url = "https://api.covidactnow.org/v2/country/US.timeseries.json?apiKey=" ++ api_key(),
+    Headers = [],
+    Request = {Url, Headers},
+    HttpOptions = [{autoredirect, false}],
+    Options = [{body_format, binary}],
+    Result = case httpc:request(get, Request, HttpOptions, Options) of
+        {error, Reason} ->
+            {error, Reason};
+        {ok, {{_, 503, _}, _RespHeaders, _RespBody}} ->
+            {error, service_unavailable};
+        {ok, {{_, 200, _}, _RespHeaders, RespBody}} ->
+            Json = jsx:decode(RespBody),
+            {ok, parse_json(Json)};
+        {ok, {{_, Code, _}, _RespHeaders, RespBody}} ->
+            {error, {Code, RespBody}}
+    end.
 
 state_hist(FipsCode) when is_binary(FipsCode) ->
     state_hist(binary_to_list(FipsCode));
