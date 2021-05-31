@@ -159,8 +159,33 @@ plot_daily_case_count(Metrics, OutFile) ->
         "'" ++ TempFile ++ "' using 1:10 smooth bezier with lines lc rgb '#55546CFF' lw 4 title 'New Deaths (Bezier)' axes x1y2"
     ],
     Cmd = lists:join(";", Header) ++ "; plot " ++ lists:join(", ", Series),
-    execute_plot(Cmd),
-    file:delete(TempFile).
+    execute_plot(Cmd).
+    % file:delete(TempFile).
+%
+plot_daily_case_count_log(Metrics, OutFile) ->
+    Title = format_title("Daily Case Count (Log Scale)", Metrics),
+    Merged = can_api:merge_timeseries(Metrics),
+    Filled = can_api:fill_daily_stats(Merged),
+    Dates = valid_dates_for_series(Filled, [
+        #merged_timeseries.new_cases,
+        #merged_timeseries.new_deaths
+    ]),
+    StartDate = binary_to_list(lists:min(Dates)),
+    EndDate = binary_to_list(lists:max(Dates)),
+    TempFile = gen_data_file(Filled),
+    Header = plot_header(StartDate, EndDate, Title, OutFile) ++ [
+        "set logscale y",
+        "set y2tics",
+        "set ylabel 'Cases'",
+        "set y2label 'Deaths'"
+    ],
+    Series = [
+        "'" ++ TempFile ++ "' using 1:9 with boxes fs solid 1.0 lc rgb 'goldenrod' title 'New Cases (Raw)'",
+        "'" ++ TempFile ++ "' using 1:10 with boxes fs transparent solid 0.6 noborder lc rgb 'red' title 'New Deaths (Raw)' axes x1y2"
+    ],
+    Cmd = lists:join(";", Header) ++ "; plot " ++ lists:join(", ", Series),
+    execute_plot(Cmd).
+    % file:delete(TempFile).
 
 plot_vaccination_rate(Metrics, OutFile) ->
     Title = format_title("Vaccination Stats", Metrics),

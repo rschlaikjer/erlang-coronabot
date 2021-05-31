@@ -137,11 +137,13 @@ chart_fun(CommandList) ->
     CumFun = fun gnuplot:plot_cum_case_count/2,
     InfecFun = fun gnuplot:plot_infection_rate/2,
     VaxxFun = fun gnuplot:plot_vaccination_rate/2,
+    DailyLogFun = fun gnuplot:plot_daily_case_count_log/2,
     %
     DailyPair = {<<"daily">>, DailyFun},
     CumPair = {<<"cumulative">>, CumFun},
     InfectPair = {<<"infection">>, InfecFun},
     VaxxPair = {<<"vaccination">>, VaxxFun},
+    DailyLogPair = {<<"log">>, DailyLogFun},
     case CommandList of
         [] -> DailyPair;
         [<<"daily">>] -> DailyPair;
@@ -151,6 +153,7 @@ chart_fun(CommandList) ->
         [<<"infection">>, <<"rate">>] -> InfectPair;
         [<<"vaccination">>] -> VaxxPair;
         [<<"vaxx">>] -> VaxxPair;
+        [<<"log">>] -> DailyLogPair;
         _ -> undefined
     end.
 
